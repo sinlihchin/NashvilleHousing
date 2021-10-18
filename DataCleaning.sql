@@ -1,69 +1,105 @@
 /*
 
-Cleaning data in SQL queries
+Data Cleaning in SQL queries
 
 */
+-------------------------------------------------------------
 
-SELECT SaleDate, CONVERT(Date, SaleDate)
+-- Overview of the data set
+SELECT *
 FROM PortfolioProject..Nashville
 
+-- Reduce redundancy by removing time using CONVERT 
+SELECT 
+	SaleDate, 
+	CONVERT(Date, SaleDate)
+FROM PortfolioProject..Nashville
 
-Update Nashville
+-- Replace SaleDate with new SaleDate without time
+UPDATE Nashville
 SET SaleDate = CONVERT(Date, SaleDate)
 
+-- If above query doesn't work, add new SaleDateConverted column
 ALTER TABLE Nashville
 ADD SaleDateConverted Date;
 
---Populate property address data
+-- Populate SaleDateConverted with new SaleDate
+UPDATE Nashville
+SET SaleDateConverted = CONVERT(Date, SaleDate)
 
+-------------------------------------------------------------
+
+-- Property address has NULL values
+SELECT PropertyAddress
+FROM PortfolioProject..Nashville
+WHERE PropertyAddress IS NULL
+
+-- ParcelID has duplicates so if there is 2 same ParcelID but 1 is without address, can use the other with address to populate
 SELECT PropertyAddress
 FROM PortfolioProject..Nashville
 ORDER BY ParcelID
 
-SELECT a.ParcelID, a.PropertyAddress, b.ParcelID, b.PropertyAddress,
-ISNULL(a.PropertyAddress, b.PropertyAddress)
-FROM PortfolioProject..Nashville a
-JOIN PortfolioProject..Nashville b
-	on a.ParcelID = b.ParcelID
+-- Do a self join
+SELECT 
+	a.ParcelID, 
+	a.PropertyAddress, 
+	b.ParcelID, 
+	b.PropertyAddress,
+	-- Use ISNULL to locate NULL address in a and replace with b address
+	ISNULL(a.PropertyAddress, b.PropertyAddress)
+FROM PortfolioProject..Nashville AS a
+JOIN PortfolioProject..Nashville AS b
+	ON a.ParcelID = b.ParcelID
 	AND a.[UniqueID ] <> b.[UniqueID ]
 --WHERE a.PropertyAddress is null
 
+-- Populate NULL addresses fields
 UPDATE a
 SET PropertyAddress = ISNULL(a.PropertyAddress, b.PropertyAddress)
-FROM PortfolioProject..Nashville a
-JOIN PortfolioProject..Nashville b
-	on a.ParcelID = b.ParcelID
+FROM PortfolioProject..Nashville AS a
+JOIN PortfolioProject..Nashville AS b
+	ON a.ParcelID = b.ParcelID
 	AND a.[UniqueID ] <> b.[UniqueID ]
 
---Breaking out address into individual columns (address, city, state)
+-------------------------------------------------------------
 
+--Breaking out address into individual columns (address, city, state)
 SELECT PropertyAddress
 FROM PortfolioProject.dbo.Nashville
 
 SELECT
-SUBSTRING(PropertyAddress, 1, CHARINDEX(',', PropertyAddress)) as Address
-, SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress) +1, LEN(PropertyAddress)) as Address
+-- Get the string starting from position 1 up to comma
+SUBSTRING(PropertyAddress, 1, CHARINDEX(',', PropertyAddress)) 				AS Address,
+-- Get the string starting 1 position after comma up to end of string
+SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress) +1, LEN(PropertyAddress)) 	AS Address
 FROM PortfolioProject.dbo.Nashville
 
+-- Create new PropertySplitAddress column
 ALTER TABLE Nashville
 ADD PropertySplitAddress nvarchar(255);
 
+-- Populate new PropertySplitAddress
 UPDATE Nashville
 SET PropertySplitAddress = SUBSTRING(PropertyAddress, 1, CHARINDEX(',', PropertyAddress) -1)
 
+-- Create new PropertySplitCity column
 ALTER TABLE Nashville
 ADD PropertySplitCity nvarchar(255);
 
+-- Populate with city
 UPDATE Nashville
 SET PropertySplitCity = SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress) +1, LEN(PropertyAddress))
 
-SELECT *
+-------------------------------------------------------------
+
+SELECT OwnerAddress
 FROM PortfolioProject.dbo.Nashville
 
+
 SELECT
-PARSENAME(REPLACE(OwnerAddress, ',', '.'), 3),
-PARSENAME(REPLACE(OwnerAddress, ',', '.'), 2),
-PARSENAME(REPLACE(OwnerAddress, ',', '.'), 1)
+	PARSENAME(REPLACE(OwnerAddress, ',', '.'), 3),
+	PARSENAME(REPLACE(OwnerAddress, ',', '.'), 2),
+	PARSENAME(REPLACE(OwnerAddress, ',', '.'), 1)
 FROM PortfolioProject.dbo.Nashville
 
 ALTER TABLE Nashville
