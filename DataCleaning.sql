@@ -68,9 +68,9 @@ SELECT PropertyAddress
 FROM PortfolioProject.dbo.Nashville
 
 SELECT
--- Get the string starting from position 1 up to comma
+-- Get the string starting from position 1 up to comma, this retrieves the address
 SUBSTRING(PropertyAddress, 1, CHARINDEX(',', PropertyAddress)) 				AS Address,
--- Get the string starting 1 position after comma up to end of string
+-- Get the string starting 1 position after comma up to end of string, this retrieves the city
 SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress) +1, LEN(PropertyAddress)) 	AS Address
 FROM PortfolioProject.dbo.Nashville
 
@@ -97,11 +97,13 @@ FROM PortfolioProject.dbo.Nashville
 
 
 SELECT
+	-- Alternative to SUBSTRING: breaking full address into address, city, state
 	PARSENAME(REPLACE(OwnerAddress, ',', '.'), 3),
 	PARSENAME(REPLACE(OwnerAddress, ',', '.'), 2),
 	PARSENAME(REPLACE(OwnerAddress, ',', '.'), 1)
 FROM PortfolioProject.dbo.Nashville
 
+-- Add 3 new columns to keep the broken up address
 ALTER TABLE Nashville
 ADD OwnerSplitAddress nvarchar(255);
 
@@ -123,39 +125,47 @@ SET OwnerSplitState = PARSENAME(REPLACE(OwnerAddress, ',', '.'), 1)
 SELECT *
 FROM PortfolioProject.dbo.Nashville
 
+-------------------------------------------------------------
+
 --Change Y and N to Yes and No in "Sold as Vacant" field
 
+-- SoldAsVacant contains Y, N ,Yes and No. Standardise fields to be Yes and No only.
 SELECT DISTINCT(SoldAsVacant), COUNT(SoldAsVacant)
 FROM PortfolioProject.dbo.Nashville
 GROUP BY SoldAsVacant
 ORDER BY 2
 
-SELECT SoldAsVacant
-, CASE WHEN SoldAsVacant = 'Y' THEN 'Yes'
+-- Replace Y/N with Yes/No
+SELECT 
+	SoldAsVacant,
+	CASE WHEN SoldAsVacant = 'Y' THEN 'Yes'
 		WHEN SoldAsVacant = 'N' THEN 'No'
 		ELSE SoldAsVacant
 		END
 FROM PortfolioProject.dbo.Nashville
 
+-- Populate
 UPDATE Nashville
 SET SoldAsVacant = CASE WHEN SoldAsVacant = 'Y' THEN 'Yes'
-		WHEN SoldAsVacant = 'N' THEN 'No'
-		ELSE SoldAsVacant
-		END
+			WHEN SoldAsVacant = 'N' THEN 'No'
+			ELSE SoldAsVacant
+			END
 
---Remove Duplicates
+-------------------------------------------------------------
+
+-- Find Duplicates
 
 WITH RowNumCTE AS (
 SELECT *,
+	-- Partition by columns that contain duplicates
 	ROW_NUMBER() OVER (
 	PARTITION BY ParcelID,
-				PropertyAddress,
-				SalePrice,
-				SaleDate,
-				LegalReference
-				ORDER BY
-					UniqueID
-					) row_num
+			PropertyAddress,
+			SalePrice,
+			SaleDate,
+			LegalReference
+			ORDER BY UniqueID
+		) AS row_num
 FROM PortfolioProject.dbo.Nashville
 --ORDER BY ParcelID
 )
@@ -164,13 +174,18 @@ FROM RowNumCTE
 WHERE row_num > 1
 ORDER BY PropertyAddress
 
+-------------------------------------------------------------
+
 --Delete Unused Columns
 
 SELECT *
 FROM PortfolioProject.dbo.Nashville
 
 ALTER TABLE PortfolioProject.dbo.Nashville
-DROP COLUMN OwnerAddress, TaxDistrict, PropertyAddress
+DROP COLUMN 
+	OwnerAddress, 
+	TaxDistrict, 
+	PropertyAddress
 
 ALTER TABLE PortfolioProject.dbo.Nashville
 DROP COLUMN SaleDate
