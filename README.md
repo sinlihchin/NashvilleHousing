@@ -21,7 +21,7 @@ Write SQL query to:
 
 **Software used:** MS SQL Server Management Studio  
 **Data set:** [AlexTheAnalyst Repo](https://github.com/AlexTheAnalyst/PortfolioProjects)  
-**Video guide:** [SQL Data Exploration](https://youtu.be/8rO7ztF4NtU)
+**Video guide:** [SQL Data Cleaning](https://youtu.be/8rO7ztF4NtU)
 
 ## Data Overview
 
